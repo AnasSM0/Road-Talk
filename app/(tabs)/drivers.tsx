@@ -23,7 +23,7 @@ export default function DriversScreen() {
         callManager.startCall(driver.plate, true); // Initiator
         
         // 3. Navigate to UI
-        router.push('/call');
+        router.push('/call/active');
     };
 
     const renderItem = ({ item }: { item: Driver }) => (

@@ -1,7 +1,7 @@
 import { useIncomingCallListener } from '@/hooks/useIncomingCallListener';
 import { Tabs } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Radar, Settings, Users } from 'lucide-react-native';
+import { Radar, Radio, Settings, Users } from 'lucide-react-native';
 
 export default function TabLayout() {
   useIncomingCallListener();
@@ -42,6 +42,13 @@ export default function TabLayout() {
           options={{
             title: 'Settings',
             tabBarIcon: ({ color }) => <Settings color={color} size={24} />,
+          }}
+        />
+        <Tabs.Screen
+          name="highway" // This will look for app/(tabs)/highway.tsx. Be careful.
+          options={{
+            title: 'Highway',
+            tabBarIcon: ({ color }) => <Radio color={color} size={24} />, // Need to import Radio
           }}
         />
       </Tabs>

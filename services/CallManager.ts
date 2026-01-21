@@ -1,5 +1,4 @@
 import { useStore } from '@/store/useStore';
-import { supabase } from '@/supabase/client';
 import { RTCIceCandidate, RTCPeerConnection, RTCSessionDescription, mediaDevices } from 'react-native-webrtc';
 
 const CONFIG = {
@@ -9,33 +8,32 @@ const CONFIG = {
   ],
 };
 
-class SignalService {
-  private channel: any;
+import { socket } from './socket';
 
+class SignalService {
   constructor(myPlate: string, onSignal: (payload: any) => void) {
-    this.channel = supabase.channel(`call:${myPlate}`);
-    this.channel
-      .on('broadcast', { event: 'signal' }, (payload: any) => {
-          console.log('Got signal', payload);
-          onSignal(payload.payload);
-      })
-      .subscribe();
+    // Socket should already be connected via useLocationRadar or app init
+    // But we ensure we listen
+    socket.off('signal'); // Clear previous listeners to avoid dupes if re-init
+    socket.on('signal', (payload: any) => {
+        console.log('Got signal', payload);
+        onSignal(payload);
+    });
   }
   
   sendSignal(targetPlate: string, payload: any) {
-    // We send to the TARGET's channel
     console.log('Sending signal to', targetPlate, payload.type);
-    supabase.channel(`call:${targetPlate}`).send({
-        type: 'broadcast',
-        event: 'signal',
-        payload: payload
+    socket.emit('signal', {
+        target: targetPlate,
+        ...payload
     });
   }
   
   cleanup() {
-    if (this.channel) supabase.removeChannel(this.channel);
+    socket.off('signal');
   }
 }
+
 
 export class CallManager {
   private peer: RTCPeerConnection | null = null;
@@ -102,7 +100,7 @@ export class CallManager {
     }
 
     // ICE Handling
-    this.peer.onicecandidate = (event) => {
+    (this.peer as any).onicecandidate = (event: any) => {
         if (event.candidate) {
             this.signal?.sendSignal(targetPlate, {
                 type: 'CANDIDATE',
@@ -112,7 +110,7 @@ export class CallManager {
         }
     };
     
-    this.peer.onconnectionstatechange = () => {
+    (this.peer as any).onconnectionstatechange = () => {
         console.log('Connection State:', this.peer?.connectionState);
         if (this.peer?.connectionState === 'connected') {
             useStore.getState().setCallState('CONNECTED');
@@ -121,9 +119,9 @@ export class CallManager {
         }
     };
 
-    if (isInitiator) {
+     if (isInitiator) {
         // Create Offer
-        const offer = await this.peer.createOffer({});
+        const offer = await this.peer.createOffer({} as any);
         await this.peer.setLocalDescription(offer);
         this.signal?.sendSignal(targetPlate, {
             type: 'OFFER',
